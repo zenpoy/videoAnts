@@ -15,11 +15,12 @@ void testApp::setup(){
 
 	colorImg.allocate(320,240);
 	grayImage.allocate(320,240);
+	pixel.allocate(1,1);
 
 	sizeOfAnt = 6;
-	min_x = 20;
+	min_x = 100;
 	max_x = 660;
-	min_y = 20;
+	min_y = 100;
 	max_y = 500;
 	max_radius = 0.0025;
 	color_distance_factor = 1;
@@ -27,13 +28,16 @@ void testApp::setup(){
 	mesh.clear();
 	mesh.setMode(OF_PRIMITIVE_POINTS);
 	for(int i=0;i<NUM_OF_ANTS;i++) {
-		ofVec2f p = ofVec2f(ofRandom(min_x,max_x),ofRandom(min_y,max_y));
+		ofVec2f p = ofVec2f(ofRandom(0,1),ofRandom(0,1));
 		mesh.addVertex(p);
 		mesh.addColor(ofColor(ofRandom(0,255),ofRandom(0,255),ofRandom(0,255), 64));
 		velocities[i] = ofVec2f(0, 0);
 		rgb_velocities[i] = ofVec3f(0, 0, 0);
 	}
 
+	camera.setupPerspective();
+	
+	frame = 1;
 	isFullScreen = false;
 }
 
@@ -52,6 +56,10 @@ void testApp::update(){
 	bNewFrame = vidPlayer.isFrameNew();
 #endif
 
+	frame++;
+	frame%=10000;
+	camera.rotate(cosf(frame / 10.0f),sinf(frame / 21.0f),cosf(frame / 22.0f),sinf(frame / 23.0f));
+
 	if (bNewFrame){
 
 #ifdef _USE_LIVE_VIDEO
@@ -62,22 +70,21 @@ void testApp::update(){
 		grayImage = colorImg;
 	}
 
+	
+
 	for(int i=0;i<NUM_OF_ANTS;i++) {
 		ofVec2f p = mesh.getVertex(i);
 
 		float distance = 3;
 
 		if (bNewFrame) {
-			colorImg.setROI(ofMap(p.x, min_x, max_x, 0, 320), ofMap(p.y, min_y, max_y, 0, 240), 2, 2);
-			ofxCvColorImage img;
-			img.allocate(1,1);
-			img = colorImg.getRoiPixels();
+			colorImg.setROI(ofMap(p.x, 0, 1, 0, 320), ofMap(p.y, 0, 1, 0, 240), 2, 2);
+			pixel = colorImg.getRoiPixels();
 
-			ofFloatColor c = img.getPixelsRef().getColor(0,0);
+			ofFloatColor c = pixel.getPixelsRef().getColor(0,0);
 			ofVec3f c1 = ofVec3f(powf(ofClamp(c.r,0,1), 1.5), powf(ofClamp(c.g,0,1),1.5), powf(ofClamp(c.b,0,1), 1.5));
 			ofVec3f c2 = ofVec3f(mesh.getColor(i).r, mesh.getColor(i).g, mesh.getColor(i).b);
 
-			img.clear();
 
 			colorImg.resetROI();
 			
@@ -91,13 +98,13 @@ void testApp::update(){
 			
 			rgb_velocities[i] = (c2 - old_c2);
 
-			float r_distnace = abs(c2.x-c1.x);
-			float g_distnace = abs(c2.y-c1.y);
-			float b_distnace = abs(c2.z-c1.z);
+			float r_distance = abs(c2.x-c1.x);
+			float g_distance = abs(c2.y-c1.y);
+			float b_distance = abs(c2.z-c1.z);
 			
-			rgb_velocities[i].x += ofRandom(-r_distnace,r_distnace);
-			rgb_velocities[i].y += ofRandom(-g_distnace,g_distnace);
-			rgb_velocities[i].z += ofRandom(-b_distnace,b_distnace);
+			rgb_velocities[i].x += ofRandom(-r_distance,r_distance);
+			rgb_velocities[i].y += ofRandom(-g_distance,g_distance);
+			rgb_velocities[i].z += ofRandom(-b_distance,b_distance);
 
 			rgb_velocities[i] *= color_distance_factor * distance;
 
@@ -109,32 +116,34 @@ void testApp::update(){
 
 			velocities[i] = (p - old_p);
 			
-			velocities[i].x += ofRandom(-max_radius,max_radius) * (max_x - min_x);
-			velocities[i].y += ofRandom(-max_radius,max_radius) * (max_y - min_y);
+			velocities[i].x += ofRandom(-max_radius,max_radius);
+			velocities[i].y += ofRandom(-max_radius,max_radius);
 
 			velocities[i] *= distance;
 
 
 
-			if (p.x >= max_x){
-				p.x = max_x - 1;
+			if (p.x >= 1){
+				p.x = 1;
 				velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(1,0)) * -1 + 90) * 1.5;
 			}
-			if (p.x < min_x){
-				p.x = min_x + 1;
+			if (p.x < 0){
+				p.x = 0;
 				velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(1,0)) * -1 - 90) * 1.5;
 			}
 
-			if (p.y >= max_y) {
-				p.y =  max_y + 1;
+			if (p.y >= 1) {
+				p.y =  1;
 				velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(0,1)) * -1 - 90) * 1.5;
 			}
-			if (p.y < min_y) {
-				p.y =  min_y - 1;
+			if (p.y < 0) {
+				p.y =  0;
 				velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(0,1)) * -1 + 90) * 1.5;
 			}
 
-			mesh.setVertex(i, p);
+			ofVec3f p3(p.x, p.y, distance);
+
+			mesh.setVertex(i, p3);
 		}		
 	}
 }
@@ -152,10 +161,18 @@ void testApp::draw(){
 	//grayImage.draw(360,20);
 
 	//draw our ants
+	camera.begin();
+
 	ofEnableAlphaBlending();
 	ofEnablePointSprites();
-	mesh.drawFaces();
+	
+	ofPushMatrix();
+	ofTranslate(min_x, min_y);
+	ofScale(max_x, max_y, 300);
+		mesh.drawFaces();
+	ofPopMatrix();
 
+	camera.end();
 
 	ofDisablePointSprites();
 
@@ -166,8 +183,9 @@ void testApp::draw(){
 	sprintf(reportStr, "Press 'f' to toggle full screen\n\
 					   Press 'q' / 'a' to change the size of ants. Current is: %d \n\
 					   Press 'w' / 's' to change max radius. Current is: %f \n\
-					   Press 'e' / 'd' to change the color distance factor. Current is: %f"
-					   , sizeOfAnt, max_radius, color_distance_factor);
+					   Press 'e' / 'd' to change the color distance factor. Current is: %f\n\
+					   fps: %.3f"
+					   , sizeOfAnt, max_radius, color_distance_factor, ofGetFrameRate());
 	ofDrawBitmapString(reportStr, 20, 600);
 }
 
@@ -199,6 +217,18 @@ void testApp::keyPressed(int key){
 		break;
 	case 'd':
 		color_distance_factor *= 0.999;
+		break;
+	case 'y':
+		camera.rotate(0.1f, 1, 0, 0);
+		break;
+	case 'h':
+		camera.rotate(-0.1f, 1, 0, 0);
+		break;
+	case 'g':
+		camera.rotate(0.1f, 0, 1, 0);
+		break;
+	case 'j':
+		camera.rotate(-0.1f, 0, 1, 0);
 		break;
 	}
 }

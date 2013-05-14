@@ -9,7 +9,7 @@
 #define _USE_LIVE_VIDEO		// uncomment this to use a live camera
 								// otherwise, we'll use a movie file
 
-#define NUM_OF_ANTS 5000
+#define NUM_OF_ANTS 50000
 
 class testApp : public ofBaseApp{
 
@@ -52,5 +52,8 @@ class testApp : public ofBaseApp{
 		bool isFullScreen;
 		float max_radius;
 		float color_distance_factor;
+		ofxCvColorImage pixel;
+		ofCamera camera;
+		int frame;
 };
 

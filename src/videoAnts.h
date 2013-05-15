@@ -9,7 +9,7 @@
 #define _USE_LIVE_VIDEO		// uncomment this to use a live camera
 								// otherwise, we'll use a movie file
 
-#define NUM_OF_ANTS 50000
+#define NUM_OF_ANTS 420000
 
 class testApp : public ofBaseApp{
 
@@ -55,5 +55,6 @@ class testApp : public ofBaseApp{
 		ofxCvColorImage pixel;
 		ofCamera camera;
 		int frame;
+
 };
 

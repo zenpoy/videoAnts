@@ -19,20 +19,36 @@ void testApp::setup(){
 
 	sizeOfAnt = 6;
 	min_x = 100;
-	max_x = 660;
-	min_y = 100;
-	max_y = 500;
+	max_x = 900;
+	min_y = 50;
+	max_y = 700;
 	max_radius = 0.0025;
 	color_distance_factor = 1;
 
 	mesh.clear();
-	mesh.setMode(OF_PRIMITIVE_POINTS);
-	for(int i=0;i<NUM_OF_ANTS;i++) {
-		ofVec2f p = ofVec2f(ofRandom(0,1),ofRandom(0,1));
-		mesh.addVertex(p);
-		mesh.addColor(ofColor(ofRandom(0,255),ofRandom(0,255),ofRandom(0,255), 64));
-		velocities[i] = ofVec2f(0, 0);
-		rgb_velocities[i] = ofVec3f(0, 0, 0);
+	mesh.setMode(OF_PRIMITIVE_TRIANGLES);
+	for(int i=0; i<NUM_OF_ANTS; i += 3) {
+			ofVec2f p = ofVec2f(ofRandom(0,1),ofRandom(0,1));
+			ofVec2f p1 = p;
+			ofVec2f p2 = p;
+
+			mesh.addVertex(p);
+			mesh.addVertex(p1);
+			mesh.addVertex(p2);
+
+			ofColor c = ofColor(ofRandom(0,255),ofRandom(0,255),ofRandom(0,255), 64);
+
+			mesh.addColor(c);
+			mesh.addColor(c);
+			mesh.addColor(c);
+			
+			velocities[i] = ofVec2f(0, 0);
+			velocities[i + 1] = ofVec2f(0, 0);
+			velocities[i + 2] = ofVec2f(0, 0);
+			
+			rgb_velocities[i] = ofVec3f(0, 0, 0);
+			rgb_velocities[i + 1] = ofVec3f(0, 0, 0);
+			rgb_velocities[i + 2] = ofVec3f(0, 0, 0);
 	}
 
 	camera.setupPerspective();
@@ -69,32 +85,31 @@ void testApp::update(){
 #endif
 		grayImage = colorImg;
 	}
+	colorImg.resetROI();
 
+	ofVec3f *vertices = mesh.getVerticesPointer();
+	ofFloatColor *colors = mesh.getColorsPointer();
+	ofPixelsRef colorImgPixels = colorImg.getPixelsRef();
 	
-
-	for(int i=0;i<NUM_OF_ANTS;i++) {
-		ofVec2f p = mesh.getVertex(i);
+	#pragma omp parallel for
+	for(int i=0;i<NUM_OF_ANTS;i += 3) {
+		ofVec2f p = vertices[i];
 
 		float distance = 3;
 
+
 		if (bNewFrame) {
-			colorImg.setROI(ofMap(p.x, 0, 1, 0, 320), ofMap(p.y, 0, 1, 0, 240), 2, 2);
-			pixel = colorImg.getRoiPixels();
-
-			ofFloatColor c = pixel.getPixelsRef().getColor(0,0);
-			ofVec3f c1 = ofVec3f(powf(ofClamp(c.r,0,1), 1.5), powf(ofClamp(c.g,0,1),1.5), powf(ofClamp(c.b,0,1), 1.5));
-			ofVec3f c2 = ofVec3f(mesh.getColor(i).r, mesh.getColor(i).g, mesh.getColor(i).b);
-
-
-			colorImg.resetROI();
-			
+			ofFloatColor c = colorImgPixels.getColor(ofMap(p.x, 0, 1, 0, 320), ofMap(p.y, 0, 1, 0, 240));
+			ofVec3f c1 = ofVec3f(ofClamp(c.r,0,1), ofClamp(c.g,0,1), ofClamp(c.b,0,1));
+			ofVec3f c2 = ofVec3f(colors[i].r, colors[i].g, colors[i].b);
+		
 			distance = c1.distance(c2);
 
 			ofVec3f old_c2 = c2;
 			
 			
 			c2 += rgb_velocities[i];
-			mesh.setColor(i, ofFloatColor(ofClamp(c2.x,0,1),ofClamp(c2.y,0,1),ofClamp(c2.z,0,1), 0.3));
+			
 			
 			rgb_velocities[i] = (c2 - old_c2);
 
@@ -124,28 +139,50 @@ void testApp::update(){
 
 
 			if (p.x >= 1){
-				p.x = 1;
-				velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(1,0)) * -1 + 90) * 1.5;
+				p.x = p.x - (float)(int)p.x;
+				velocities[i] *= 0.5;
+				//velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(1,0)) * -1 + 90);
 			}
 			if (p.x < 0){
-				p.x = 0;
-				velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(1,0)) * -1 - 90) * 1.5;
+				p.x = p.x + (float)(int)(-p.x) + 1.0f;
+				velocities[i] *= 0.5;
+				//velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(1,0)) * -1 - 90);
 			}
 
 			if (p.y >= 1) {
-				p.y =  1;
-				velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(0,1)) * -1 - 90) * 1.5;
+				p.y =  p.y - (float)(int)p.y;
+				velocities[i] *= 0.5;
+				//velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(0,1)) * -1 - 90);
 			}
 			if (p.y < 0) {
-				p.y =  0;
-				velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(0,1)) * -1 + 90) * 1.5;
+				p.y =  p.y + (float)(int)(-p.y) + 1.0f;
+				velocities[i] *= 0.5;
+				//velocities[i] = velocities[i].rotate(velocities[i].normalize().dot(ofVec2f(0,1)) * -1 + 90);
 			}
 
-			ofVec3f p3(p.x, p.y, distance);
 
-			mesh.setVertex(i, p3);
-		}		
+			ofVec2f p1 = p - velocities[i] + velocities[i].perpendiculared() *  velocities[i].length() * 0.1f; 
+			ofVec2f p2 = p - velocities[i] + velocities[i].perpendiculared() * -velocities[i].length() * 0.1f;
+
+			ofVec3f p3_0(p.x, p.y, distance);
+			ofVec3f p3_1(p1.x, p1.y, vertices[i].z);
+			ofVec3f p3_2(p2.x, p2.y, vertices[i].z);
+
+			//mesh.setVertex(i, p3);
+			#pragma omp critical
+			{
+				ofFloatColor c = ofFloatColor(ofClamp(c2.x,0,1),ofClamp(c2.y,0,1),ofClamp(c2.z,0,1), 0.6);
+				colors[i] = c;
+				colors[i + 1] = ofFloatColor(old_c2.x, old_c2.y, old_c2.z, 0.2);
+				colors[i + 2] =  colors[i + 1];
+				vertices[i] = p3_0;
+				vertices[i + 1] = p3_1;
+				vertices[i + 2] = p3_2;
+			}
+		}	
 	}
+	mesh.setColor(0, mesh.getColor(0));
+	mesh.setVertex(0, mesh.getVertex(0));
 }
 
 //--------------------------------------------------------------
@@ -167,9 +204,10 @@ void testApp::draw(){
 	ofEnablePointSprites();
 	
 	ofPushMatrix();
-	ofTranslate(min_x, min_y);
-	ofScale(max_x, max_y, 300);
+	ofTranslate(min_x, min_y, 1);
+	ofScale(max_x, max_y, 200);
 		mesh.drawFaces();
+		mesh.drawVertices();
 	ofPopMatrix();
 
 	camera.end();
@@ -191,7 +229,7 @@ void testApp::draw(){
 
 //--------------------------------------------------------------
 void testApp::keyPressed(int key){
-
+	#pragma omp master
 	switch (key){
 	case 'q':
 		sizeOfAnt ++;

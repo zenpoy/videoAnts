@@ -55,6 +55,7 @@ void testApp::setup(){
 	
 	frame = 1;
 	isFullScreen = false;
+	isChangeColor = true;
 }
 
 //--------------------------------------------------------------
@@ -171,10 +172,12 @@ void testApp::update(){
 			//mesh.setVertex(i, p3);
 			#pragma omp critical
 			{
-				ofFloatColor c = ofFloatColor(ofClamp(c2.x,0,1),ofClamp(c2.y,0,1),ofClamp(c2.z,0,1), 0.6);
-				colors[i] = c;
-				colors[i + 1] = ofFloatColor(old_c2.x, old_c2.y, old_c2.z, 0.2);
-				colors[i + 2] =  colors[i + 1];
+				if (isChangeColor) {
+					ofFloatColor c = ofFloatColor(ofClamp(c2.x,0,1),ofClamp(c2.y,0,1),ofClamp(c2.z,0,1), 0.3);
+					colors[i] = c;
+					colors[i + 1] = ofFloatColor(old_c2.x, old_c2.y, old_c2.z, 0.3);
+					colors[i + 2] =  colors[i + 1];
+				}
 				vertices[i] = p3_0;
 				vertices[i + 1] = p3_1;
 				vertices[i + 2] = p3_2;
@@ -222,6 +225,7 @@ void testApp::draw(){
 					   Press 'q' / 'a' to change the size of ants. Current is: %d \n\
 					   Press 'w' / 's' to change max radius. Current is: %f \n\
 					   Press 'e' / 'd' to change the color distance factor. Current is: %f\n\
+					   Press 'l' to toggle color change\n\
 					   fps: %.3f"
 					   , sizeOfAnt, max_radius, color_distance_factor, ofGetFrameRate());
 	ofDrawBitmapString(reportStr, 20, 600);
@@ -267,6 +271,9 @@ void testApp::keyPressed(int key){
 		break;
 	case 'j':
 		camera.rotate(-0.1f, 0, 1, 0);
+		break;
+	case 'l':
+		isChangeColor = !isChangeColor;
 		break;
 	}
 }

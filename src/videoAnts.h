@@ -50,6 +50,7 @@ class testApp : public ofBaseApp{
 		int min_y;
 		int max_y;
 		bool isFullScreen;
+		bool isChangeColor;
 		float max_radius;
 		float color_distance_factor;
 		ofxCvColorImage pixel;
